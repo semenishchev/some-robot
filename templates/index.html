@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot</title>
+</head>
+<body>
+    <h2>Websocket: <span id="websocket_status">Connecting</span></h2>
+</body>
+<script>
+    let wsAddr = `ws://${document.location.hostname}:{{ websocket_port }}`
+    console.log("Websocket address: " + wsAddr)
+    let ws = new WebSocket(wsAddr);
+    let primary = false;
+    function markAsPrimary() {
+        if(primary) return;
+        primary = true;
+        console.log("Marked as primary")
+    }
+    function send(obj) {
+        try {
+            ws.send(JSON.stringify(obj));
+        } catch(e) {
+            console.error("Failed sending message: " + obj);
+            console.error(e);
+        }
+    }
+    ws.onopen = () => {
+        send({request: "status"});
+        document.querySelector("#websocket_status").innerHTML = "Connected: " + ws.url
+    }
+    ws.onmessage = message => {
+        try {
+            let data = JSON.parse(message.data);
+            if(data.primary) {
+                markAsPrimary();
+            }
+        } catch(e) {
+            console.error("Failed processing message: " + message)
+            console.error(e);
+        }
+    };
+</script>
+</html>
