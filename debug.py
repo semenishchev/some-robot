@@ -31,6 +31,10 @@ def on_message(client: ServerConnection, message: dict[str, Any]):
                 if primary_client == client:
                     primary_client = None
                 client.send({"primary": False})
+            case "controls":
+                print(f"Moved to {message['x']} {message['y']}")
+            case "sensitivity":
+                print("sens: " + str(message["value"]))
 
 def websocket_handler(client: ServerConnection):
     clients.append(client)
@@ -56,7 +60,7 @@ def websocket_handler(client: ServerConnection):
         set_primary(clients[0])
 
 def start_websocket(app: Flask):
-    websocket: Server = serve(websocket_handler, "localhost", port=3001)
+    websocket: Server = serve(websocket_handler, app.config["bind"][0], port=3001)
     setattr(Flask, "_websocket", websocket)
     def start_websocket():
         print("WebSocket listening at: " + str(websocket.socket.getsockname()))
@@ -69,9 +73,11 @@ def start_websocket(app: Flask):
     websocket_thread.name = "Robot-Websocket-Thread"
     websocket_thread.start()
 
+bind = ("0.0.0.0", 5000)
 def restart(app):
+    app.config["bind"] = bind
     if hasattr(Flask, "_websocket"):
         websocket = getattr(Flask, "_websocket")
         websocket.shutdown()
     start_websocket(app)
-webserver(restart=restart).run(debug=True)
+webserver(restart=restart).run(host=bind[0], port=bind[1], debug=True)

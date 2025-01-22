@@ -4,9 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+        }
+
+        #video-container {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 16/9;
+            background-color: black;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 600px;
+            gap: 10px;
+        }
+
+        #joystick {
+            border: 1px solid #FF0000;
+            width: 200px;
+            height: 200px;
+            background: #ccc;
+        }
+
+        input[type="range"] {
+            writing-mode: bt-lr; /* Vertical slider */
+            -webkit-appearance: slider-vertical;
+            width: 8px;
+            height: 150px;
+            margin: 0 10px;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+    </style>
+    <script src="{{ url_for('static', filename='joy.js') }}"></script>
 </head>
 <body>
     <h2>Websocket: <span id="websocket_status">Connecting</span></h2>
+
+    <div id="controls">
+        <div id="joystick-cont">
+            <div id="joystick"></div>
+        </div>
+        <div id="video-container">
+            <video id="video-output" autoplay></video>
+        </div>
+        <div id="slider-container">
+            <label for="sensitivity">Sensitivity</label>
+            <input type="range" id="sensitivity" min="1" max="100" step="1" value="50">
+        </div>
+    </div>
 </body>
 <script>
     let wsAddr = `ws://${document.location.hostname}:{{ websocket_port }}`
@@ -41,5 +111,30 @@
             console.error(e);
         }
     };
+    const joystickObj = document.querySelector("#joystick");
+    const zeroX = joystickObj.clientWidth / 2;
+    const zeroY = joystickObj.clientHeight / 2;
+    console.log(joystickObj.clientWidth + " " + joystickObj.clientHeight);
+    const dataContainer = {
+        x: 0,
+        y: 0,
+        request: "controls"
+    };
+    const joystick = new JoyStick("joystick", {}, stickData => {
+        const currentX = (zeroX - stickData.xPosition) / zeroX * 2;
+        const currentY = (zeroY - stickData.yPosition) / zeroY * 2;
+        if(dataContainer.x != currentX || dataContainer.y != currentY) {
+            dataContainer.x = currentX;
+            dataContainer.y = currentY;
+            send(dataContainer);
+        }
+    });
+
+    // Sensitivity slider
+    const sensitivitySlider = document.getElementById('sensitivity');
+    sensitivitySlider.addEventListener('input', (event) => {
+        const sensitivity = event.target.value;
+        send({ request: "sensitivity", value: sensitivity })
+    });
 </script>
 </html>
